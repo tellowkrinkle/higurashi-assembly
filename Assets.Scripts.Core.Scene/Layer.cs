@@ -146,9 +146,7 @@ namespace Assets.Scripts.Core.Scene
 			{
 				alpha = 1f - alpha;
 			}
-			startRange = targetAlpha;
 			targetPosition = array[array.Length - 1];
-			targetAlpha = alpha;
 			FadeTo(alpha, time);
 			isInMotion = true;
 			if (path.Length > 1)
@@ -209,16 +207,14 @@ namespace Assets.Scripts.Core.Scene
 			Vector3 localPosition = base.transform.localPosition;
 			targetPosition = new Vector3(x2, y2, localPosition.z);
 			targetScale = new Vector3(num, num, 1f);
-			if (adjustAlpha)
-			{
-				startRange = targetAlpha;
-				targetRange = alpha;
-				targetAlpha = alpha;
-			}
 			GameSystem.Instance.RegisterAction(delegate
 			{
 				if (Mathf.Approximately(wait, 0f))
 				{
+					if (adjustAlpha)
+					{
+						InstantFadeTo(alpha);
+					}
 					FinishAll();
 				}
 				else
@@ -280,7 +276,7 @@ namespace Assets.Scripts.Core.Scene
 						material.shader = shaderDefault;
 						current = 1f;
 						FadingOut = true;
-						iTween.ValueTo(base.gameObject, iTween.Hash("from", current, "to", targetRange, "time", time, "onupdate", "SetRange", "oncomplete", "HideLayer"));
+						iTween.ValueTo(base.gameObject, iTween.Hash("from", current, "to", targetRange, "time", time, "onupdate", "SetAlphaOnly", "oncomplete", "HideLayer"));
 						if (isBlocking)
 						{
 							GameSystem.Instance.AddWait(new Wait(time, WaitTypes.WaitForMove, HideLayer));
@@ -311,16 +307,17 @@ namespace Assets.Scripts.Core.Scene
 				{
 					alignment = LayerAlignment.AlignTopleft;
 				}
-				if (origin.HasValue)
+				if (origin is Vector2 orig)
 				{
-					CreateMesh(texture2D.width, texture2D.height, origin.GetValueOrDefault());
+					CreateMesh(texture2D.width, texture2D.height, orig);
 				}
 				else
 				{
 					CreateMesh(texture2D.width, texture2D.height, alignment);
 				}
 			}
-			SetRange(startRange);
+			SetRangeOnly(startRange);
+			SetAlphaOnly(targetAlpha);
 			base.transform.localPosition = new Vector3((float)x, (float)(-y), (float)Priority * -0.1f);
 			GameSystem.Instance.RegisterAction(delegate
 			{
@@ -345,10 +342,10 @@ namespace Assets.Scripts.Core.Scene
 			startRange = 1f;
 			targetRange = 0f;
 			targetAlpha = 0f;
-			SetRange(startRange);
+			SetRangeOnly(startRange);
 			GameSystem.Instance.RegisterAction(delegate
 			{
-				iTween.ValueTo(base.gameObject, iTween.Hash("from", startRange, "to", targetRange, "time", time, "onupdate", "SetRange", "oncomplete", "HideLayer"));
+				iTween.ValueTo(base.gameObject, iTween.Hash("from", startRange, "to", targetRange, "time", time, "onupdate", "SetRangeOnly", "oncomplete", "HideLayer"));
 				if (isBlocking)
 				{
 					GameSystem.Instance.AddWait(new Wait(time, WaitTypes.WaitForMove, HideLayer));
@@ -444,12 +441,46 @@ namespace Assets.Scripts.Core.Scene
 			iTween.ValueTo(base.gameObject, iTween.Hash("from", startRange, "to", targetRange, "time", time, "onupdate", "SetRange", "oncomplete", "FinishFade"));
 		}
 
-		public void FadeTo(float alpha, float time)
+		public void FadeAlphaTo(float alpha, float time, string then = "FinishFadeAlpha")
+		{
+			iTween.Stop(base.gameObject);
+			float startAlpha = targetAlpha;
+			targetAlpha = alpha;
+			iTween.ValueTo(base.gameObject, iTween.Hash("from", startAlpha, "to", targetAlpha, "time", time, "onupdate", "SetAlphaOnly", "oncomplete", then));
+		}
+
+		public void FadeRangeTo(float range, float time, string then = "FinishFadeRange")
 		{
 			iTween.Stop(base.gameObject);
 			startRange = targetRange;
-			targetRange = alpha;
-			iTween.ValueTo(base.gameObject, iTween.Hash("from", startRange, "to", targetRange, "time", time, "onupdate", "SetRange", "oncomplete", "FinishFade"));
+			targetRange = range;
+			iTween.ValueTo(base.gameObject, iTween.Hash("from", startRange, "to", targetRange, "time", time, "onupdate", "SetRangeOnly", "oncomplete", then));
+		}
+
+		public void FadeTo(float alpha, float time)
+		{
+			if (ShaderHasRange)
+			{
+				FadeRangeTo(alpha, time);
+			}
+			else
+			{
+				FadeAlphaTo(alpha, time);
+			}
+		}
+
+		public void InstantFadeTo(float alpha)
+		{
+			if (ShaderHasRange)
+			{
+				targetRange = alpha;
+				SetRangeOnly(alpha);
+			}
+			else
+			{
+				targetAlpha = alpha;
+				SetAlphaOnly(alpha);
+			}
 		}
 
 		public void FadeOut(float time)
@@ -460,8 +491,7 @@ namespace Assets.Scripts.Core.Scene
 				startRange = 1f;
 			}
 			FadingOut = true;
-			targetRange = 0f;
-			iTween.ValueTo(base.gameObject, iTween.Hash("from", startRange, "to", targetRange, "time", time, "onupdate", "SetRange", "oncomplete", "HideLayer"));
+			FadeAlphaTo(0f, time, then: "HideLayer");
 		}
 
 		public void FinishAll()
@@ -477,19 +507,49 @@ namespace Assets.Scripts.Core.Scene
 		public void FinishFade()
 		{
 			iTween.Stop(base.gameObject);
-			SetRange(targetRange);
+			SetRangeOnly(targetRange);
+			SetAlphaOnly(targetAlpha);
+		}
+
+		public void FinishFadeAlpha()
+		{
+			iTween.Stop(base.gameObject);
+			SetAlphaOnly(targetAlpha);
+		}
+
+		public void FinishFadeRange()
+		{
+			iTween.Stop(base.gameObject);
+			SetRangeOnly(targetRange);
+		}
+
+		private bool ShaderHasRange {
+			get
+			{
+				return material.shader.name == shaderCrossfade.name || material.shader.name == shaderMasked.name;
+			}
 		}
 
 		public void SetRange(float a)
 		{
-			if (material.shader.name != shaderCrossfade.name && material.shader.name != shaderMasked.name)
-			{
-				material.SetFloat("_Alpha", a);
-			}
-			else
+			if (ShaderHasRange)
 			{
 				material.SetFloat("_Range", a);
 			}
+			else
+			{
+				material.SetFloat("_Alpha", a);
+			}
+		}
+
+		public void SetRangeOnly(float range)
+		{
+			material.SetFloat("_Range", range);
+		}
+
+		public void SetAlphaOnly(float alpha)
+		{
+			material.SetFloat("_Alpha", alpha);
 		}
 
 		public void SetPrimaryTexture(Texture2D tex)
@@ -721,17 +781,10 @@ namespace Assets.Scripts.Core.Scene
 				{
 					GameSystem.Instance.RegisterAction(delegate
 					{
-						if (Mathf.Approximately(wait, 0f))
+						FadeInLayer(wait);
+						if (isBlocking)
 						{
-							FinishFade();
-						}
-						else
-						{
-							FadeInLayer(wait);
-							if (isBlocking)
-							{
-								GameSystem.Instance.AddWait(new Wait(wait, WaitTypes.WaitForMove, FinishFade));
-							}
+							GameSystem.Instance.AddWait(new Wait(wait, WaitTypes.WaitForMove, FinishFade));
 						}
 					});
 				}
