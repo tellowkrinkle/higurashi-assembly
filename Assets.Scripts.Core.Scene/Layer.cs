@@ -426,14 +426,14 @@ namespace Assets.Scripts.Core.Scene
 							CreateMesh(texture2D.width, texture2D.height, alignment);
 						}
 					}
-					if (primary != null)
+					if (primary != null && !Mathf.Approximately(wait, 0f))
 					{
 						material.shader = shaderCrossfade;
 						SetSecondaryTexture(primary);
 						SetPrimaryTexture(texture2D);
+						SetAlpha(alpha);
 						startRange = 1f;
 						targetRange = 0f;
-						targetAlpha = 1f;
 					}
 					else
 					{
@@ -602,6 +602,11 @@ namespace Assets.Scripts.Core.Scene
 			}
 		}
 
+		public void SetAlpha(float a)
+		{
+			material.SetFloat("_Alpha", a);
+		}
+
 		public void SetPrimaryTexture(Texture2D tex)
 		{
 			primary = tex;
@@ -716,6 +721,19 @@ namespace Assets.Scripts.Core.Scene
 			meshFilter.mesh = mesh;
 		}
 
+		static Shader ShaderFromFile(string path)
+		{
+			try
+			{
+				string contents = File.ReadAllText(path);
+				Material material = new Material(contents);
+				Debug.Log("Successfully got shader from " + path + " as " + material.shader.name);
+				return material.shader;
+			}
+			catch (DirectoryNotFoundException) { return null; }
+			catch (IOException) { return null; }
+		}
+
 		public void Initialize()
 		{
 			shaderDefault = Shader.Find("MGShader/LayerShader");
@@ -724,6 +742,12 @@ namespace Assets.Scripts.Core.Scene
 			shaderMasked = Shader.Find("MGShader/LayerMasked");
 			shaderMultiply = Shader.Find("MGShader/LayerMultiply");
 			shaderReverseZ = Shader.Find("MGShader/LayerShaderReverseZ");
+			string baseDir = Path.Combine(Application.streamingAssetsPath, "shaders");
+			Shader loadedCrossfade = ShaderFromFile(Path.Combine(baseDir, "LayerCrossfade4.shader"));
+			Shader loadedMasked = ShaderFromFile(Path.Combine(baseDir, "LayerMasked.shader"));
+			shaderCrossfade = loadedCrossfade ?? shaderCrossfade;
+			shaderMasked = loadedMasked ?? shaderMasked;
+
 			shaderType = 0;
 			meshFilter = GetComponent<MeshFilter>();
 			meshRenderer = GetComponent<MeshRenderer>();
@@ -809,9 +833,9 @@ namespace Assets.Scripts.Core.Scene
 					material.shader = shaderCrossfade;
 					SetSecondaryTexture(primary);
 					SetPrimaryTexture(tex2d);
+					SetAlpha(alpha);
 					startRange = 1f;
 					targetRange = 0f;
-					targetAlpha = 1f;
 				}
 				else
 				{
@@ -831,6 +855,14 @@ namespace Assets.Scripts.Core.Scene
 				{
 					FinishFade();
 				}
+			}
+		}
+
+		public string DebugString
+		{
+			get
+			{
+				return name + ", primary: " + PrimaryName + ", secondary: " + SecondaryName + ", mask: " + MaskName + ", alpha: " + CurrentAlpha + ", shader: " + CurrentShaderName;
 			}
 		}
 	}

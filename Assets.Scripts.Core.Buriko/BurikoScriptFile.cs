@@ -2160,6 +2160,8 @@ namespace Assets.Scripts.Core.Buriko
 				return OperationMODGetHighestChapterFlag();
 			case BurikoOperations.ModSetMainFontOutlineWidth:
 				return OperationMODSetMainFontOutlineWidth();
+			case BurikoOperations.ModSetLayerAlpha:
+				return OperationMODSetLayerAlpha();
 			default:
 				ScriptError("Unhandled Operation : " + op);
 				return BurikoVariable.Null;
@@ -2545,6 +2547,15 @@ namespace Assets.Scripts.Core.Buriko
 			int width = ReadVariable().IntValue();
 			GameSystem.Instance.OutlineWidth = width / 100f;
 			GameSystem.Instance.MainUIController.TextWindow.outlineWidth = GameSystem.Instance.OutlineWidth;
+			return BurikoVariable.Null;
+		}
+
+		private BurikoVariable OperationMODSetLayerAlpha()
+		{
+			SetOperationType("MODSetLayerAlpha");
+			int layer = ReadVariable().IntValue();
+			float alpha = ReadVariable().IntValue() / 100f;
+			GameSystem.Instance.SceneController.GetIfInUse(layer)?.SetAlpha(alpha);
 			return BurikoVariable.Null;
 		}
 	}

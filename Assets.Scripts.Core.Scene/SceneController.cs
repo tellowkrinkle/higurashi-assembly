@@ -82,11 +82,13 @@ namespace Assets.Scripts.Core.Scene
 		public void DebugPrintLayers()
 		{
 			System.Collections.Generic.List<string> lines = new System.Collections.Generic.List<string>();
+			lines.Add("Scene 1 Background: " + scene1.BackgroundLayer.DebugString);
+			lines.Add("Scene 2 Background: " + scene2.BackgroundLayer.DebugString);
 			for (int i = 0; i < layers.Length; i++)
 			{
 				Layer layer = layers[i];
 				if (layer == null || !layer.IsInUse) { continue; }
-				lines.Add(i + ": " + layer.name + ", primary: " + layer.PrimaryName + ", secondary: " + layer.SecondaryName + ", mask: " + layer.MaskName + ", alpha: " + layer.CurrentAlpha + ", shader: " + layer.CurrentShaderName);
+				lines.Add(i + ": " + layer.DebugString);
 			}
 			Debug.Log(string.Join("\n", lines.ToArray()));
 		}
@@ -108,6 +110,7 @@ namespace Assets.Scripts.Core.Scene
 			}
 			Layer layer = LayerPool.ActivateLayer();
 			layer.name = "Layer " + id;
+			layer.SetAlpha(1f);
 			layers[id] = layer;
 			return layer;
 		}
@@ -193,7 +196,7 @@ namespace Assets.Scripts.Core.Scene
 				oldy = y;
 				oldz = z;
 			}
-			i.DrawLayer(textureName, oldx, oldy, oldz, null, 1f, /*isBustshot:*/ true, type, wait, isblocking);
+			i.DrawLayer(textureName, oldx, oldy, oldz, null, i.CurrentAlpha, /*isBustshot:*/ true, type, wait, isblocking);
 			i.SetPriority(priority);
 			if (move)
 			{
@@ -339,6 +342,7 @@ namespace Assets.Scripts.Core.Scene
 		{
 			Scene scene = GetActiveScene();
 			scene.BackgroundLayer.DrawLayer(texture, 0, 0, 0, null, 0f, /*isBustshot:*/ false, 0, wait, isblocking);
+			scene.BackgroundLayer.SetAlpha(1f);
 		}
 
 		public void SetFaceToUpperLayer(bool isUpper)
@@ -392,6 +396,7 @@ namespace Assets.Scripts.Core.Scene
 			s.UpdateRange(0f);
 			s.BackgroundLayer.ReleaseTextures();
 			s.BackgroundLayer.DrawLayer(backgroundfilename, 0, 0, 0, null, 0f, /*isBustshot:*/ false, 0, 0f, /*isBlocking:*/ false);
+			s.BackgroundLayer.SetAlpha(1f);
 			s.SetTransitionMask(maskname);
 			faceLayer.HideLayer();
 			gameSystem.RegisterAction(delegate
@@ -410,6 +415,7 @@ namespace Assets.Scripts.Core.Scene
 			s.UpdateRange(0f);
 			s.BackgroundLayer.ReleaseTextures();
 			s.BackgroundLayer.DrawLayer(backgroundfilename, 0, 0, 0, null, 0f, /*isBustshot:*/ false, 0, 0f, /*isBlocking:*/ false);
+			s.BackgroundLayer.SetAlpha(1f);
 			faceLayer.HideLayer();
 			gameSystem.RegisterAction(delegate
 			{
@@ -834,7 +840,7 @@ namespace Assets.Scripts.Core.Scene
 				oldy = y;
 				oldz = z;
 			}
-			layer2.MODDrawLayer(textureName, tex2d, oldx, oldy, oldz, null, 1f, /*isBustshot:*/ true, type, wait, isblocking);
+			layer2.MODDrawLayer(textureName, tex2d, oldx, oldy, oldz, null, layer2.CurrentAlpha, /*isBustshot:*/ true, type, wait, isblocking);
 			layer2.SetPriority(priority);
 			if (move)
 			{
