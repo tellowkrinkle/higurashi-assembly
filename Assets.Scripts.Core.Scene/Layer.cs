@@ -77,8 +77,6 @@ namespace Assets.Scripts.Core.Scene
 
 		private LayerAlignment alignment;
 
-		private MtnCtrlElement[] motion;
-
 		public bool IsInUse => primary != null;
 
 		public Material MODMaterial => material;
@@ -96,14 +94,13 @@ namespace Assets.Scripts.Core.Scene
 			base.transform.localScale = scale;
 		}
 
-		private IEnumerator ControlledMotion()
+		private IEnumerator ControlledMotion(MtnCtrlElement[] motion)
 		{
-			MtnCtrlElement[] array = motion;
-			foreach (MtnCtrlElement mt in array)
+			foreach (MtnCtrlElement mt in motion)
 			{
 				float time = (float)mt.Time / 1000f;
 				MoveLayerEx(mt.Route, mt.Points, 1f - (float)mt.Transparancy / 256f, time);
-				yield return (object)new WaitForSeconds(time);
+				yield return new WaitForSeconds(time);
 				startRange = 1f - (float)mt.Transparancy / 256f;
 			}
 			FinishAll();
@@ -120,16 +117,15 @@ namespace Assets.Scripts.Core.Scene
 			{
 				base.transform.localPosition = targetPosition;
 			}
-			motion = motions;
-			MtnCtrlElement mtnCtrlElement = motion[motion.Length - 1];
+			MtnCtrlElement mtnCtrlElement = motions[motions.Length - 1];
 			Vector3 vector = mtnCtrlElement.Route[mtnCtrlElement.Points - 1];
 			Vector3 localPosition = base.transform.localPosition;
 			vector.z = localPosition.z;
 			targetPosition = vector;
-			targetRange = (float)mtnCtrlElement.Transparancy / 256f;
+			targetAlpha = (float)mtnCtrlElement.Transparancy / 256f;
 			GameSystem.Instance.RegisterAction(delegate
 			{
-				StartCoroutine("ControlledMotion");
+				StartCoroutine(ControlledMotion(motions));
 			});
 		}
 
@@ -140,11 +136,11 @@ namespace Assets.Scripts.Core.Scene
 			array[0] = base.transform.localPosition;
 			for (int i = 0; i < points; i++)
 			{
-				array[i + 1].x = path[i].x;
-				array[i + 1].y = 0f - path[i].y;
-				ref Vector3 reference = ref array[i + 1];
-				Vector3 localPosition = base.transform.localPosition;
-				reference.z = localPosition.z;
+				array[i + 1] = new Vector3(
+					x: path[i].x,
+					y: -path[i].y,
+					z: base.transform.localPosition.z
+				);
 			}
 			if (UsingCrossShader())
 			{
@@ -165,17 +161,49 @@ namespace Assets.Scripts.Core.Scene
 			}
 		}
 
+		private static iTween.EaseType EaseTypeFromInt(int inEase)
+		{
+			switch (inEase) {
+			case 0:
+				return iTween.EaseType.linear;
+			case 1:
+				return iTween.EaseType.easeInOutSine;
+			case 2:
+				return iTween.EaseType.easeInOutSine;
+			case 3:
+				return iTween.EaseType.easeInOutQuad;
+			case 4:
+				return iTween.EaseType.easeInSine;
+			case 5:
+				return iTween.EaseType.easeOutSine;
+			case 6:
+				return iTween.EaseType.easeInQuad;
+			case 7:
+				return iTween.EaseType.easeOutQuad;
+			case 8:
+				return iTween.EaseType.easeInCubic;
+			case 9:
+				return iTween.EaseType.easeOutCubic;
+			case 10:
+				return iTween.EaseType.easeInQuart;
+			case 11:
+				return iTween.EaseType.easeOutQuart;
+			case 12:
+				return iTween.EaseType.easeInExpo;
+			case 13:
+				return iTween.EaseType.easeOutExpo;
+			case 14:
+				return iTween.EaseType.easeInExpo;
+			case 15:
+				return iTween.EaseType.easeOutExpo;
+			default:
+				return iTween.EaseType.linear;
+			}
+		}
+
 		public void MoveLayer(int x, int y, int z, float alpha, int easetype, float wait, bool isBlocking, bool adjustAlpha)
 		{
-			float num = 1f;
-			if (z > 0)
-			{
-				num = 1f - (float)z / 400f;
-			}
-			if (z < 0)
-			{
-				num = 1f + (float)z / -400f;
-			}
+			float num = 1f - (float)z / 400f;
 			float x2 = (float)x;
 			float y2 = (float)(-y);
 			Vector3 localPosition = base.transform.localPosition;
@@ -206,58 +234,7 @@ namespace Assets.Scripts.Core.Scene
 							FadeTo(alpha, wait);
 						}
 					}
-					iTween.EaseType easeType = iTween.EaseType.linear;
-					switch (easetype)
-					{
-					case 0:
-						easeType = iTween.EaseType.linear;
-						break;
-					case 1:
-						easeType = iTween.EaseType.easeInOutSine;
-						break;
-					case 2:
-						easeType = iTween.EaseType.easeInOutSine;
-						break;
-					case 3:
-						easeType = iTween.EaseType.easeInOutQuad;
-						break;
-					case 4:
-						easeType = iTween.EaseType.easeInSine;
-						break;
-					case 5:
-						easeType = iTween.EaseType.easeOutSine;
-						break;
-					case 6:
-						easeType = iTween.EaseType.easeInQuad;
-						break;
-					case 7:
-						easeType = iTween.EaseType.easeOutQuad;
-						break;
-					case 8:
-						easeType = iTween.EaseType.easeInCubic;
-						break;
-					case 9:
-						easeType = iTween.EaseType.easeOutCubic;
-						break;
-					case 10:
-						easeType = iTween.EaseType.easeInQuart;
-						break;
-					case 11:
-						easeType = iTween.EaseType.easeOutQuart;
-						break;
-					case 12:
-						easeType = iTween.EaseType.easeInExpo;
-						break;
-					case 13:
-						easeType = iTween.EaseType.easeOutExpo;
-						break;
-					case 14:
-						easeType = iTween.EaseType.easeInExpo;
-						break;
-					case 15:
-						easeType = iTween.EaseType.easeOutExpo;
-						break;
-					}
+					iTween.EaseType easeType = EaseTypeFromInt(easetype);
 					iTween.ScaleTo(base.gameObject, iTween.Hash("scale", targetScale, "time", wait, "islocal", true, "easetype", easeType, "oncomplete", "FinishAll", "oncompletetarget", base.gameObject));
 					iTween.MoveTo(base.gameObject, iTween.Hash("position", targetPosition, "time", wait, "islocal", true, "easetype", easeType, "oncomplete", "FinishAll", "oncompletetarget", base.gameObject));
 					if (isBlocking)
@@ -381,98 +358,12 @@ namespace Assets.Scripts.Core.Scene
 
 		public void DrawLayer(string textureName, int x, int y, int z, Vector2? origin, float alpha, bool isBustshot, int type, float wait, bool isBlocking)
 		{
-			FinishAll();
-			if (textureName == string.Empty)
+			Texture2D texture = null;
+			if (textureName != string.Empty)
 			{
-				HideLayer();
+				texture = AssetManager.Instance.LoadTexture(textureName);
 			}
-			else
-			{
-				Texture2D texture2D = AssetManager.Instance.LoadTexture(textureName);
-				if (texture2D == null)
-				{
-					Logger.LogError("Failed to load texture " + textureName);
-				}
-				else
-				{
-					startRange = 0f;
-					targetRange = alpha;
-					targetAlpha = alpha;
-					meshRenderer.enabled = true;
-					shaderType = type;
-					PrimaryName = textureName;
-					float num = 1f;
-					if (z > 0)
-					{
-						num = 1f - (float)z / 400f;
-					}
-					if (z < 0)
-					{
-						num = 1f + (float)z / -400f;
-					}
-					if (mesh == null)
-					{
-						alignment = LayerAlignment.AlignCenter;
-						if ((x != 0 || y != 0) && !isBustshot)
-						{
-							alignment = LayerAlignment.AlignTopleft;
-						}
-						if (origin.HasValue)
-						{
-							CreateMesh(texture2D.width, texture2D.height, origin.GetValueOrDefault());
-						}
-						else
-						{
-							CreateMesh(texture2D.width, texture2D.height, alignment);
-						}
-					}
-					if (primary != null)
-					{
-						material.shader = shaderCrossfade;
-						SetSecondaryTexture(primary);
-						SetPrimaryTexture(texture2D);
-						startRange = 1f;
-						targetRange = 0f;
-						targetAlpha = 1f;
-					}
-					else
-					{
-						material.shader = shaderDefault;
-						if (type == 3)
-						{
-							material.shader = shaderMultiply;
-						}
-						SetPrimaryTexture(texture2D);
-					}
-					SetRange(startRange);
-					base.transform.localPosition = new Vector3((float)x, (float)(-y), (float)Priority * -0.1f);
-					base.transform.localScale = new Vector3(num, num, 1f);
-					targetPosition = base.transform.localPosition;
-					targetScale = base.transform.localScale;
-					if (Mathf.Approximately(wait, 0f))
-					{
-						FinishFade();
-					}
-					else
-					{
-						GameSystem.Instance.RegisterAction(delegate
-						{
-							if (Mathf.Approximately(wait, 0f))
-							{
-								FinishFade();
-							}
-							else
-							{
-								FadeInLayer(wait);
-								if (isBlocking)
-								{
-									GameSystem.Instance.AddWait(new Wait(wait, WaitTypes.WaitForMove, FinishFade));
-								}
-							}
-						});
-					}
-				}
-			}
+			MODDrawLayer(textureName, texture, x, y, z, origin, alpha, isBustshot, type, wait, isBlocking);
 		}
 
 		public void SetAngle(float angle, float wait)
@@ -498,6 +389,7 @@ namespace Assets.Scripts.Core.Scene
 			material.shader = shaderCrossfade;
 			SetSecondaryTexture(primary);
 			SetPrimaryTexture(primaryTexture);
+			PrimaryName = targetImage;
 			startRange = 1f;
 			targetRange = 0f;
 			targetAlpha = 1f;
@@ -542,10 +434,8 @@ namespace Assets.Scripts.Core.Scene
 		{
 			Priority = newpriority + 1;
 			Vector3 localPosition = base.transform.localPosition;
-			float x = localPosition.x;
-			Vector3 localPosition2 = base.transform.localPosition;
-			targetPosition = new Vector3(x, localPosition2.y, (float)Priority * -0.1f);
-			base.transform.localPosition = targetPosition;
+			localPosition.z = (float)Priority * -0.1f;
+			base.transform.localPosition = localPosition;
 		}
 
 		public void FadeInLayer(float time)
@@ -756,10 +646,6 @@ namespace Assets.Scripts.Core.Scene
 		{
 		}
 
-		public void MODOnlyRecompile()
-		{
-		}
-
 		public void MODDrawLayer(string textureName, Texture2D tex2d, int x, int y, int z, Vector2? origin, float alpha, bool isBustshot, int type, float wait, bool isBlocking)
 		{
 			FinishAll();
@@ -830,6 +716,24 @@ namespace Assets.Scripts.Core.Scene
 				if (Mathf.Approximately(wait, 0f))
 				{
 					FinishFade();
+				}
+				else
+				{
+					GameSystem.Instance.RegisterAction(delegate
+					{
+						if (Mathf.Approximately(wait, 0f))
+						{
+							FinishFade();
+						}
+						else
+						{
+							FadeInLayer(wait);
+							if (isBlocking)
+							{
+								GameSystem.Instance.AddWait(new Wait(wait, WaitTypes.WaitForMove, FinishFade));
+							}
+						}
+					});
 				}
 			}
 		}
