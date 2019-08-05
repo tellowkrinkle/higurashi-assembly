@@ -79,6 +79,18 @@ namespace Assets.Scripts.Core.Scene
 			UpperLayerRange = 32;
 		}
 
+		public void DebugPrintLayers()
+		{
+			System.Collections.Generic.List<string> lines = new System.Collections.Generic.List<string>();
+			for (int i = 0; i < layers.Length; i++)
+			{
+				Layer layer = layers[i];
+				if (layer == null || !layer.IsInUse) { continue; }
+				lines.Add(i + ": " + layer.name + ", primary: " + layer.PrimaryName + ", secondary: " + layer.SecondaryName + ", mask: " + layer.MaskName + ", alpha: " + layer.CurrentAlpha + ", shader: " + layer.CurrentShaderName);
+			}
+			Debug.Log(string.Join("\n", lines.ToArray()));
+		}
+
 		public Layer GetIfInUse(int id)
 		{
 			if (layers[id] != null && !LayerPool.IsInPool(layers[id].gameObject) && layers[id].IsInUse)

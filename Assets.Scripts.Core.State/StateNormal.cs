@@ -52,6 +52,10 @@ namespace Assets.Scripts.Core.State
 				gameSystem.IsSkipping = false;
 				gameSystem.IsForceSkip = false;
 			}
+			if (Input.GetKeyDown(KeyCode.Z))
+			{
+				gameSystem.SceneController.DebugPrintLayers();
+			}
 			if (Input.GetKeyDown(KeyCode.R))
 			{
 				var voices = gameSystem.TextHistory.LatestVoice;

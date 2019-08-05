@@ -85,6 +85,9 @@ namespace Assets.Scripts.Core.Scene
 
 		public MeshRenderer MODMeshRenderer => meshRenderer;
 
+		public string CurrentShaderName => material.shader.name;
+		public float CurrentAlpha => material.GetFloat("_Alpha");
+
 		public void RestoreScaleAndPosition(Vector3 scale, Vector3 position)
 		{
 			targetPosition = position;
